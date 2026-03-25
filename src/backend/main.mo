@@ -45,12 +45,18 @@ actor {
   let userPurchases = Map.empty<Principal, Map.Map<Nat, Bool>>();
   let userProfiles = Map.empty<Principal, { username : Text; email : Text }>();
 
+  // ─── User Registration ───────────────────────────────────────────────
+
+  // Call this on login. First user to call becomes admin, others become regular users.
+  public shared ({ caller }) func registerCaller() : async () {
+    AccessControl.initializeUser(accessControlState, caller);
+  };
+
   // ─── User Profiles ───────────────────────────────────────────────────
 
   public shared ({ caller }) func saveCallerUserProfile(profile : { username : Text; email : Text }) : async () {
-    if (not AccessControl.hasPermission(accessControlState, caller, #user)) {
-      return;
-    };
+    // Auto-register the user (first becomes admin, rest become users)
+    AccessControl.initializeUser(accessControlState, caller);
     userProfiles.add(caller, profile);
   };
 

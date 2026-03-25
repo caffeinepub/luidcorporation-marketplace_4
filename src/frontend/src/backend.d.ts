@@ -38,6 +38,7 @@ export interface Purchase {
 
 export interface backendInterface {
     // Auth
+    registerCaller(): Promise<void>;
     assignCallerUserRole(user: Principal, role: UserRole): Promise<void>;
     getCallerUserProfile(): Promise<{ username: string; email: string } | null>;
     getCallerUserRole(): Promise<UserRole>;

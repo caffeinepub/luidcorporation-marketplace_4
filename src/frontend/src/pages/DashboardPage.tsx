@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Download, Loader2, Package, Shield, User } from "lucide-react";
 import { motion } from "motion/react";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import Footer from "../components/Footer";
 import Navbar from "../components/Navbar";
@@ -104,11 +104,30 @@ function PurchasedScriptCard({
 
 export default function DashboardPage() {
   const { identity } = useInternetIdentity();
+  const { actor } = useActor();
   const { data: profile, isLoading: profileLoading } = useCallerProfile();
   const { data: purchases, isLoading: purchasesLoading } =
     useMyPurchasedScripts();
   const { data: isAdmin } = useIsCallerAdmin();
   const [showProfileModal, setShowProfileModal] = useState(false);
+  const registered = useRef(false);
+
+  // Register the caller as soon as the actor is ready.
+  // The first user to do this becomes admin automatically.
+  useEffect(() => {
+    if (!actor || registered.current) return;
+    registered.current = true;
+    (actor as any).registerCaller().catch(() => {
+      // ignore errors (e.g. already registered)
+    });
+  }, [actor]);
+
+  // Auto-show profile setup for first-time users
+  useEffect(() => {
+    if (!profileLoading && profile === null) {
+      setShowProfileModal(true);
+    }
+  }, [profileLoading, profile]);
 
   const principal = identity?.getPrincipal().toString() ?? "";
   const shortPrincipal = principal
