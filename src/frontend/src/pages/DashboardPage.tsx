@@ -38,7 +38,7 @@ function PurchasedScriptCard({
     if (!actor) return;
     setIsDownloading(true);
     try {
-      const url = await (actor as any).getDownloadUrl(script.id);
+      const url = await actor.getDownloadUrl(script.id);
       if (url) window.open(url, "_blank");
       else toast.error("URL de download não disponível.");
     } catch {
@@ -110,17 +110,22 @@ export default function DashboardPage() {
     useMyPurchasedScripts();
   const { data: isAdmin } = useIsCallerAdmin();
   const [showProfileModal, setShowProfileModal] = useState(false);
-  const registered = useRef(false);
+  // Track which principal has already been registered to avoid calling on anonymous actor
+  const registeredPrincipal = useRef<string | null>(null);
 
-  // Register the caller as soon as the actor is ready.
-  // The first user to do this becomes admin automatically.
+  // Register caller only when we have an authenticated (non-anonymous) identity + actor.
+  // The first user to call this becomes admin automatically.
   useEffect(() => {
-    if (!actor || registered.current) return;
-    registered.current = true;
-    (actor as any).registerCaller().catch(() => {
+    if (!actor || !identity) return;
+    const principal = identity.getPrincipal();
+    if (principal.isAnonymous()) return;
+    const principalStr = principal.toString();
+    if (registeredPrincipal.current === principalStr) return;
+    registeredPrincipal.current = principalStr;
+    actor.registerCaller().catch(() => {
       // ignore errors (e.g. already registered)
     });
-  }, [actor]);
+  }, [actor, identity]);
 
   // Auto-show profile setup for first-time users
   useEffect(() => {
