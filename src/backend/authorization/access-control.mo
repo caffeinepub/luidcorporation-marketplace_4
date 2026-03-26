@@ -37,23 +37,6 @@ module {
     };
   };
 
-  // Registers a user without requiring a token.
-  // The very first user to call this becomes admin automatically.
-  public func initializeUser(state : AccessControlState, caller : Principal) {
-    if (caller.isAnonymous()) { return };
-    switch (state.userRoles.get(caller)) {
-      case (?_) {}; // already registered, skip
-      case (null) {
-        if (not state.adminAssigned) {
-          state.userRoles.add(caller, #admin);
-          state.adminAssigned := true;
-        } else {
-          state.userRoles.add(caller, #user);
-        };
-      };
-    };
-  };
-
   public func getUserRole(state : AccessControlState, caller : Principal) : UserRole {
     if (caller.isAnonymous()) { return #guest };
     switch (state.userRoles.get(caller)) {

@@ -105,6 +105,30 @@ export enum UserRole {
     user = "user",
     guest = "guest"
 }
+export type ScriptCategory =
+    | { __kind__: "DiscordBots" }
+    | { __kind__: "WebScraping" }
+    | { __kind__: "Automation" };
+
+export interface Script {
+    id: bigint;
+    title: string;
+    description: string;
+    category: ScriptCategory;
+    price: bigint;
+    version: string;
+    downloadUrl: string;
+    languageTag: string;
+    createdAt: bigint;
+}
+
+export interface Purchase {
+    id: bigint;
+    buyerPrincipal: Principal;
+    scriptId: bigint;
+    purchasedAt: bigint;
+}
+
 export interface backendInterface {
     _caffeineStorageBlobIsLive(hash: Uint8Array): Promise<boolean>;
     _caffeineStorageBlobsToDelete(): Promise<Array<Uint8Array>>;
@@ -113,19 +137,26 @@ export interface backendInterface {
     _caffeineStorageRefillCashier(refillInformation: _CaffeineStorageRefillInformation | null): Promise<_CaffeineStorageRefillResult>;
     _caffeineStorageUpdateGatewayPrincipals(): Promise<void>;
     _initializeAccessControlWithSecret(userSecret: string): Promise<void>;
+    registerCaller(): Promise<void>;
     assignCallerUserRole(user: Principal, role: UserRole): Promise<void>;
-    getCallerUserProfile(): Promise<{
-        username: string;
-        email: string;
-    } | null>;
+    getCallerUserProfile(): Promise<{ username: string; email: string; } | null>;
     getCallerUserRole(): Promise<UserRole>;
     isCallerAdmin(): Promise<boolean>;
-    saveCallerUserProfile(profile: {
-        username: string;
-        email: string;
-    }): Promise<void>;
+    saveCallerUserProfile(profile: { username: string; email: string; }): Promise<void>;
+    addScript(title: string, description: string, category: ScriptCategory, price: bigint, version: string, downloadUrl: string, languageTag: string): Promise<bigint>;
+    updateScript(id: bigint, title: string, description: string, category: ScriptCategory, price: bigint, version: string, downloadUrl: string, languageTag: string): Promise<boolean>;
+    deleteScript(id: bigint): Promise<boolean>;
+    listScripts(): Promise<Script[]>;
+    getScript(id: bigint): Promise<Script | null>;
+    grantPurchase(buyer: Principal, scriptId: bigint): Promise<boolean>;
+    recordPurchase(scriptId: bigint): Promise<boolean>;
+    getMyPurchasedScripts(): Promise<Script[]>;
+    getDownloadUrl(scriptId: bigint): Promise<string | null>;
+    hasUserPurchased(scriptId: bigint): Promise<boolean>;
+    listAllPurchases(): Promise<Purchase[]>;
+    listAllUsers(): Promise<{ principal: Principal; username: string; email: string; }[]>;
 }
-import type { UserRole as _UserRole, _CaffeineStorageRefillInformation as __CaffeineStorageRefillInformation, _CaffeineStorageRefillResult as __CaffeineStorageRefillResult } from "./declarations/backend.did.d.ts";
+import type { UserRole as _UserRole, ScriptCategory as _ScriptCategory, Script as _Script, Purchase as _Purchase, _CaffeineStorageRefillInformation as __CaffeineStorageRefillInformation, _CaffeineStorageRefillResult as __CaffeineStorageRefillResult } from "./declarations/backend.did.d.ts";
 export class Backend implements backendInterface {
     constructor(private actor: ActorSubclass<_SERVICE>, private _uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, private _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, private processError?: (error: unknown) => never){}
     async _caffeineStorageBlobIsLive(arg0: Uint8Array): Promise<boolean> {
@@ -226,6 +257,20 @@ export class Backend implements backendInterface {
             return result;
         }
     }
+    async registerCaller(): Promise<void> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.registerCaller();
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.registerCaller();
+            return result;
+        }
+    }
     async assignCallerUserRole(arg0: Principal, arg1: UserRole): Promise<void> {
         if (this.processError) {
             try {
@@ -240,10 +285,7 @@ export class Backend implements backendInterface {
             return result;
         }
     }
-    async getCallerUserProfile(): Promise<{
-        username: string;
-        email: string;
-    } | null> {
+    async getCallerUserProfile(): Promise<{ username: string; email: string; } | null> {
         if (this.processError) {
             try {
                 const result = await this.actor.getCallerUserProfile();
@@ -285,10 +327,7 @@ export class Backend implements backendInterface {
             return result;
         }
     }
-    async saveCallerUserProfile(arg0: {
-        username: string;
-        email: string;
-    }): Promise<void> {
+    async saveCallerUserProfile(arg0: { username: string; email: string; }): Promise<void> {
         if (this.processError) {
             try {
                 const result = await this.actor.saveCallerUserProfile(arg0);
@@ -302,6 +341,193 @@ export class Backend implements backendInterface {
             return result;
         }
     }
+    async addScript(arg0: string, arg1: string, arg2: ScriptCategory, arg3: bigint, arg4: string, arg5: string, arg6: string): Promise<bigint> {
+        const candid_cat = to_candid_ScriptCategory(arg2);
+        if (this.processError) {
+            try {
+                return await this.actor.addScript(arg0, arg1, candid_cat, arg3, arg4, arg5, arg6);
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            return await this.actor.addScript(arg0, arg1, candid_cat, arg3, arg4, arg5, arg6);
+        }
+    }
+    async updateScript(arg0: bigint, arg1: string, arg2: string, arg3: ScriptCategory, arg4: bigint, arg5: string, arg6: string, arg7: string): Promise<boolean> {
+        const candid_cat = to_candid_ScriptCategory(arg3);
+        if (this.processError) {
+            try {
+                return await this.actor.updateScript(arg0, arg1, arg2, candid_cat, arg4, arg5, arg6, arg7);
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            return await this.actor.updateScript(arg0, arg1, arg2, candid_cat, arg4, arg5, arg6, arg7);
+        }
+    }
+    async deleteScript(arg0: bigint): Promise<boolean> {
+        if (this.processError) {
+            try {
+                return await this.actor.deleteScript(arg0);
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            return await this.actor.deleteScript(arg0);
+        }
+    }
+    async listScripts(): Promise<Script[]> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.listScripts();
+                return result.map(from_candid_Script);
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.listScripts();
+            return result.map(from_candid_Script);
+        }
+    }
+    async getScript(arg0: bigint): Promise<Script | null> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.getScript(arg0);
+                return result.length === 0 ? null : from_candid_Script(result[0]);
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.getScript(arg0);
+            return result.length === 0 ? null : from_candid_Script(result[0]);
+        }
+    }
+    async grantPurchase(arg0: Principal, arg1: bigint): Promise<boolean> {
+        if (this.processError) {
+            try {
+                return await this.actor.grantPurchase(arg0, arg1);
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            return await this.actor.grantPurchase(arg0, arg1);
+        }
+    }
+    async recordPurchase(arg0: bigint): Promise<boolean> {
+        if (this.processError) {
+            try {
+                return await this.actor.recordPurchase(arg0);
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            return await this.actor.recordPurchase(arg0);
+        }
+    }
+    async getMyPurchasedScripts(): Promise<Script[]> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.getMyPurchasedScripts();
+                return result.map(from_candid_Script);
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.getMyPurchasedScripts();
+            return result.map(from_candid_Script);
+        }
+    }
+    async getDownloadUrl(arg0: bigint): Promise<string | null> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.getDownloadUrl(arg0);
+                return result.length === 0 ? null : result[0];
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.getDownloadUrl(arg0);
+            return result.length === 0 ? null : result[0];
+        }
+    }
+    async hasUserPurchased(arg0: bigint): Promise<boolean> {
+        if (this.processError) {
+            try {
+                return await this.actor.hasUserPurchased(arg0);
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            return await this.actor.hasUserPurchased(arg0);
+        }
+    }
+    async listAllPurchases(): Promise<Purchase[]> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.listAllPurchases();
+                return result.map(from_candid_Purchase);
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.listAllPurchases();
+            return result.map(from_candid_Purchase);
+        }
+    }
+    async listAllUsers(): Promise<{ principal: Principal; username: string; email: string; }[]> {
+        if (this.processError) {
+            try {
+                return await this.actor.listAllUsers();
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            return await this.actor.listAllUsers();
+        }
+    }
+}
+function from_candid_ScriptCategory(value: _ScriptCategory): ScriptCategory {
+    if ('DiscordBots' in value) return { __kind__: 'DiscordBots' };
+    if ('WebScraping' in value) return { __kind__: 'WebScraping' };
+    return { __kind__: 'Automation' };
+}
+function to_candid_ScriptCategory(value: ScriptCategory): _ScriptCategory {
+    if (value.__kind__ === 'DiscordBots') return { DiscordBots: null };
+    if (value.__kind__ === 'WebScraping') return { WebScraping: null };
+    return { Automation: null };
+}
+function from_candid_Script(value: _Script): Script {
+    return {
+        id: value.id,
+        title: value.title,
+        description: value.description,
+        category: from_candid_ScriptCategory(value.category),
+        price: value.price,
+        version: value.version,
+        downloadUrl: value.downloadUrl,
+        languageTag: value.languageTag,
+        createdAt: value.createdAt,
+    };
+}
+function from_candid_Purchase(value: _Purchase): Purchase {
+    return {
+        id: value.id,
+        buyerPrincipal: value.buyerPrincipal,
+        scriptId: value.scriptId,
+        purchasedAt: value.purchasedAt,
+    };
 }
 function from_candid_UserRole_n11(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _UserRole): UserRole {
     return from_candid_variant_n12(_uploadFile, _downloadFile, value);

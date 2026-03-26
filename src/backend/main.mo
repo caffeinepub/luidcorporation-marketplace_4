@@ -45,18 +45,34 @@ actor {
   let userPurchases = Map.empty<Principal, Map.Map<Nat, Bool>>();
   let userProfiles = Map.empty<Principal, { username : Text; email : Text }>();
 
+  // ─── Internal helper: register caller if not yet registered ──────────
+  // First non-anonymous caller becomes admin; subsequent callers become users.
+  func _ensureRegistered(caller : Principal) {
+    if (caller.isAnonymous()) { return };
+    switch (accessControlState.userRoles.get(caller)) {
+      case (?_) {}; // already registered
+      case (null) {
+        if (not accessControlState.adminAssigned) {
+          accessControlState.userRoles.add(caller, #admin);
+          accessControlState.adminAssigned := true;
+        } else {
+          accessControlState.userRoles.add(caller, #user);
+        };
+      };
+    };
+  };
+
   // ─── User Registration ───────────────────────────────────────────────
 
   // Call this on login. First user to call becomes admin, others become regular users.
   public shared ({ caller }) func registerCaller() : async () {
-    AccessControl.initializeUser(accessControlState, caller);
+    _ensureRegistered(caller);
   };
 
   // ─── User Profiles ───────────────────────────────────────────────────
 
   public shared ({ caller }) func saveCallerUserProfile(profile : { username : Text; email : Text }) : async () {
-    // Auto-register the user (first becomes admin, rest become users)
-    AccessControl.initializeUser(accessControlState, caller);
+    _ensureRegistered(caller);
     userProfiles.add(caller, profile);
   };
 
